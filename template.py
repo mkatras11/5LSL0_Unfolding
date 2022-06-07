@@ -40,7 +40,8 @@ labels_example = labels_test[0:10]
 
 # %% ISTA
 def softthreshold(x,shrinkage):
-    return
+    # Compute the soft thresholding function
+    return torch.sign(x) * torch.max(torch.abs(x) - shrinkage, torch.zeros(x.shape))
 
 def ISTA(mu,shrinkage,K,y):
     return
