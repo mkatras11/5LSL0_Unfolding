@@ -5,6 +5,7 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import os
+from sklearn import metrics
 # local imports
 import MNIST_dataloader
 
@@ -17,7 +18,7 @@ data_loc = os.path.dirname(os.path.realpath(__file__))
 batch_size = 64
 
 mu = 1e-2
-shrinkage = 1e-4
+shrinkage = 1e-6
 K = 100
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -52,10 +53,25 @@ def ISTA(mu,shrinkage,K,y):
         x = x + (x - y) / (torch.norm(x - y) ** 2 + mu)
     return x
 
-
+# Make the prediction
 x_clean_pred = ISTA(mu,shrinkage,K,x_noisy_example)
-print(x_clean_pred.shape)
 
+# Show the 10 examples of the noisy images and the corresponding denoised images
+fig, ax = plt.subplots(2,10,figsize=(20,10))
+for i in range(10):
+    ax[0,i].imshow(x_noisy_example[i,0,:,:],cmap='gray')
+    ax[0,i].set_title('Noisy Image')
+    ax[1,i].imshow(x_clean_pred[i,0,:,:],cmap='gray')
+    ax[1,i].set_title('Denoised Image')
+plt.show()
+
+# %% Compute the MSE and the accuracy of the denoising
+# Compute the MSE
+MSE = torch.mean((x_clean_example - x_clean_pred) ** 2)
+print('MSE: ', MSE)
+
+
+# %% MSE
 # Run the algrithm for the entire dataset
 x_clean_pred_train = torch.zeros(x_clean_train.shape)
 x_clean_pred_test = torch.zeros(x_clean_test.shape)
@@ -63,6 +79,12 @@ for i in tqdm(range(x_clean_train.shape[0])):
     x_clean_pred_train[i] = ISTA(mu,shrinkage,K,x_noisy_train[i])
 for i in tqdm(range(x_clean_test.shape[0])):
     x_clean_pred_test[i] = ISTA(mu,shrinkage,K,x_noisy_test[i])
+
+# Compute the MSE for the training and test set
+mse_train = torch.mean((x_clean_pred_train - x_clean_train) ** 2)
+mse_test = torch.mean((x_clean_pred_test - x_clean_test) ** 2)
+print("MSE train: ", mse_train)
+print("MSE test: ", mse_test)
 
 
 # %% plot results
@@ -73,30 +95,24 @@ plt.subplot(3,10,6)
 plt.title("Noisy Examples",loc='right')
 for i in range(10):
     plt.subplot(3,10,i+1)
-    plt.imshow(x_noisy_example[i,0,:,:],cmap='gray')
+    plt.imshow(x_noisy_train[i,0,:,:],cmap='gray')
     plt.xticks([])
     plt.yticks([])
 plt.subplot(3,10,16)
 plt.title("Predicted Examples",loc='right')
 for i in range(10):
     plt.subplot(3,10,i+11)
-    plt.imshow(x_clean_pred[i,0,:,:],cmap='gray')
+    plt.imshow(x_clean_pred_train[i,0,:,:],cmap='gray')
     plt.xticks([])
     plt.yticks([])
 plt.subplot(3,10,26)
 plt.title("Clean Examples",loc='right')
 for i in range(10):
     plt.subplot(3,10,i+21)
-    plt.imshow(x_clean_example[i,0,:,:],cmap='gray')
+    plt.imshow(x_clean_train[i,0,:,:],cmap='gray')
     plt.xticks([])
     plt.yticks([])    
 plt.tight_layout()
 plt.savefig("data_examples_results.png",dpi=300,bbox_inches='tight')
 plt.show()
 
-
-    
-
-
-
-   
