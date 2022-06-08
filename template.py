@@ -19,8 +19,8 @@ data_loc = os.path.dirname(os.path.realpath(__file__))
 batch_size = 64
 
 mu = 1e-2
-shrinkage = 0.00001
-K = 10000
+shrinkage = 0.0001
+K = 500
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # get dataloader
@@ -47,14 +47,13 @@ def softthreshold(x,shrinkage):
     return torch.sign(x) * torch.max(torch.abs(x) - shrinkage, torch.zeros(x.shape))
 
 def ISTA(mu,shrinkage,K,y):
-    # Identity matrix
-    A = torch.eye(y.shape[2])
-    # Compute the ISTA with the given parameters
+    # Compute the ISTA algorithm
+    x = torch.zeros(y.shape)
     for k in range(K):
-        y = y + mu * (torch.matmul(A,y) - y)
-        y = softthreshold(y,shrinkage)
-    return y
-        
+        x = softthreshold(y - x,shrinkage)
+        x = x + (y - x) / (mu + torch.abs(y - x))
+    return x
+
 # Make the predictions
 x_clean_pred = ISTA(mu,shrinkage,K,x_noisy_example)
 
