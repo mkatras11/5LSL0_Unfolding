@@ -47,17 +47,27 @@ def softthreshold(x,shrinkage):
     return torch.sign(x) * torch.max(torch.abs(x) - shrinkage, torch.zeros(x.shape))
 
 def ISTA(mu,shrinkage,K,y):
-    # Compute the ISTA algorithm
-    x = torch.zeros(y.shape)
-    for k in range(K):
-        x = softthreshold(y - x,shrinkage)
-        x = x + (y - x) / (mu + torch.abs(y - x))
-    return x
+    # Identity matrix A and I
+    A = torch.eye(y.shape[2])
+    I = torch.eye(y.shape[2])
+    # Initialize x
+    x_out = torch.zeros(y.shape)
+    for i in range(K):
+        if i == 0:
+            x_new = y
+        else:
+            x_new = x_out
+        
+        for j in range(x_new.shape[0]):
+            x_out[j,:,:,:] = mu*torch.matmul(A,y[j,:,:,:]) + torch.matmul(I-mu*A*torch.transpose(A,0,1),x_new[j,:,:,:])
+            x_new[j,:,:,:] = softthreshold(x_out[j,:,:,:],shrinkage)
+    return x_new
 
-# Make the predictions
+
+# %% Make the predictions
 x_clean_pred = ISTA(mu,shrinkage,K,x_noisy_example)
 
-# Show the 10 examples of the noisy images and the corresponding denoised images and the ground truth
+# %% Show the 10 examples of the noisy images and the corresponding denoised images and the ground truth
 # Plot the noisy and the predicted clean image
 # show the examples in a plot
 plt.figure(figsize=(12,3))
