@@ -20,7 +20,7 @@ batch_size = 64
 
 mu = 0.09
 shrinkage = 0.01
-K = 10
+K = 1
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # get dataloader
@@ -43,8 +43,18 @@ labels_example = labels_test[0:10]
 
 # %% ISTA
 def softthreshold(x,shrinkage):
-    # Compute the soft thresholding function
-    return torch.sign(x) * torch.max(torch.abs(x) - shrinkage, torch.zeros(x.shape))
+    x_thx = x
+    
+    # compare each pixels in x with shrinkage 
+    for k in range(x.shape[0]):
+        for i in range(32):
+            for j in range(32):
+                if x[k,:,i,j] > shrinkage:
+                    x_thx[k,:,i,j] = ((np.abs(x[k,:,i,j]) - shrinkage)/np.abs(x[k,:,i,j]))*x[k,:,i,j]
+                else:
+                    x_thx[k,:,i,j] = 0
+
+    return x_thx
 
 def ISTA(mu,shrinkage,K,y):
     # Identity matrix A
@@ -99,18 +109,11 @@ print('MSE: ', MSE)
 
 # %% Entire dataset
 # Run the algrithm for the entire dataset
-x_clean_pred_train = torch.zeros(x_clean_train.shape)
-x_clean_pred_test = torch.zeros(x_clean_test.shape)
-for i in tqdm(range(x_clean_train.shape[0])):
-    x_clean_pred_train[i] = ISTA(mu,shrinkage,K,x_noisy_train[i])
-for i in tqdm(range(x_clean_test.shape[0])):
-    x_clean_pred_test[i] = ISTA(mu,shrinkage,K,x_noisy_test[i])
+x_clean_pred_test = ISTA(mu,shrinkage,K,x_noisy_test)
 
 # %% MSE
 # Compute the MSE for the training and test set
-mse_train = torch.mean((x_clean_pred_train - x_clean_train) ** 2)
 mse_test = torch.mean((x_clean_pred_test - x_clean_test) ** 2)
-print("MSE train: ", mse_train)
 print("MSE test: ", mse_test)
 
 
@@ -129,7 +132,7 @@ plt.subplot(3,10,16)
 plt.title("Predicted Examples",loc='right')
 for i in range(10):
     plt.subplot(3,10,i+11)
-    plt.imshow(x_clean_pred_train[i,0,:,:],cmap='gray')
+    plt.imshow(x_clean_pred_test[i,0,:,:],cmap='gray')
     plt.xticks([])
     plt.yticks([])
 plt.subplot(3,10,26)
