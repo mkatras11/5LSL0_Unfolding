@@ -18,9 +18,9 @@ torch.random.manual_seed(0)
 data_loc = os.path.dirname(os.path.realpath(__file__))
 batch_size = 64
 
-mu = 1e-3
-shrinkage = 0.0001
-K = 1000
+mu = 0.09
+shrinkage = 0.01
+K = 10
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # get dataloader
@@ -47,40 +47,22 @@ def softthreshold(x,shrinkage):
     return torch.sign(x) * torch.max(torch.abs(x) - shrinkage, torch.zeros(x.shape))
 
 def ISTA(mu,shrinkage,K,y):
-    # Identity matrix A and I
+    # Identity matrix A
     A = torch.eye(y.shape[2])
-    # Unsqueeze the A matrix to match the shape of y
-    A = A.unsqueeze(0).unsqueeze(0)
+    # Identity matrix I
     I = torch.eye(y.shape[2])
-    # Initialize x
-    x_out = torch.zeros(y.shape)
-    x_ista = torch.zeros(y.shape)
-    x_new = torch.zeros(y.shape)
-    # print(x_ista.size())
-    # print(y.size())
-    # print(A.size())
-    test = mu*torch.matmul(A,y[1,:,:,:])
-    print(test.size())
-    test_1 = torch.matmul(I-mu*A*torch.transpose(A,2,3),y[1,:,:,:])
-    print(test_1.size())
-    test_2 = test + test_1
-    print(test_2.size())
     for i in tqdm(range(K)):
         if i == 0:
             input = y
         else:
-            input = x_out
-        
-        for j in range(y.shape[0]):
-            x_old = input[j,:,:,:]
-            x_ista = mu*torch.matmul(A,y[j,:,:,:]) + torch.matmul(I-mu*A*torch.transpose(A,2,3),x_old)
-            x_new = softthreshold(x_ista,shrinkage)
+            input = x_new
+        x_old = input
+        x_new = softthreshold((mu*torch.matmul(A,y) + torch.matmul(I-mu*A*torch.transpose(A,0,1),x_old)),shrinkage)
     return x_new
 
 
 # %% Make the predictions
 x_clean_pred = ISTA(mu,shrinkage,K,x_noisy_example)
-
 # %% Show the 10 examples of the noisy images and the corresponding denoised images and the ground truth
 # Plot the noisy and the predicted clean image
 # show the examples in a plot
