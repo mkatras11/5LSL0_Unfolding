@@ -49,18 +49,32 @@ def softthreshold(x,shrinkage):
 def ISTA(mu,shrinkage,K,y):
     # Identity matrix A and I
     A = torch.eye(y.shape[2])
+    # Unsqueeze the A matrix to match the shape of y
+    A = A.unsqueeze(0).unsqueeze(0)
     I = torch.eye(y.shape[2])
     # Initialize x
     x_out = torch.zeros(y.shape)
-    for i in range(K):
+    x_ista = torch.zeros(y.shape)
+    x_new = torch.zeros(y.shape)
+    # print(x_ista.size())
+    # print(y.size())
+    # print(A.size())
+    test = mu*torch.matmul(A,y[1,:,:,:])
+    print(test.size())
+    test_1 = torch.matmul(I-mu*A*torch.transpose(A,2,3),y[1,:,:,:])
+    print(test_1.size())
+    test_2 = test + test_1
+    print(test_2.size())
+    for i in tqdm(range(K)):
         if i == 0:
-            x_new = y
+            input = y
         else:
-            x_new = x_out
+            input = x_out
         
-        for j in range(x_new.shape[0]):
-            x_out[j,:,:,:] = mu*torch.matmul(A,y[j,:,:,:]) + torch.matmul(I-mu*A*torch.transpose(A,0,1),x_new[j,:,:,:])
-            x_new[j,:,:,:] = softthreshold(x_out[j,:,:,:],shrinkage)
+        for j in range(y.shape[0]):
+            x_old = input[j,:,:,:]
+            x_ista = mu*torch.matmul(A,y[j,:,:,:]) + torch.matmul(I-mu*A*torch.transpose(A,2,3),x_old)
+            x_new = softthreshold(x_ista,shrinkage)
     return x_new
 
 
