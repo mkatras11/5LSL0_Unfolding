@@ -7,6 +7,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import os
 from sklearn import metrics
+from torch.nn import functional as F
 # local imports
 import MNIST_dataloader
 
@@ -20,7 +21,7 @@ batch_size = 64
 
 mu = 0.09
 shrinkage = 0.01
-K = 100
+K = 1
 
 # get dataloader
 train_loader, test_loader = MNIST_dataloader.create_dataloaders(data_loc, batch_size)
@@ -102,8 +103,8 @@ plt.show()
 
 # %% Compute the MSE and the accuracy of the denoising
 # Compute the MSE
-MSE = torch.mean((x_clean_example - x_clean_pred) ** 2)
-print('MSE: ', MSE)
+mse_example = F.mse_loss(x_clean_example,x_clean_pred)
+print('MSE example: ', mse_example)
 
 # %% Entire dataset
 # Run the model on the entire dataset over batches 
@@ -112,7 +113,7 @@ for batch_idx, (x_clean, x_noisy, labels) in enumerate(tqdm(test_loader)):
 
 # %% MSE
 # Compute the MSE for the training and test set
-mse_test = torch.mean((x_clean_pred_test - x_clean_test) ** 2)
+mse_test = F.mse_loss(x_clean_pred_test,x_clean)
 print("MSE test: ", mse_test)
 
 
