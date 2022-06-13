@@ -20,9 +20,8 @@ batch_size = 64
 
 mu = 0.09
 shrinkage = 0.01
-K = 1
+K = 100
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # get dataloader
 train_loader, test_loader = MNIST_dataloader.create_dataloaders(data_loc, batch_size)
 
@@ -43,24 +42,24 @@ labels_example = labels_test[0:10]
 
 # %% ISTA
 def softthreshold(x,shrinkage):
-    x_thx = x
-    
-    # compare each pixels in x with shrinkage 
+    # Initialize output
+    x_threshold = x.clone()
+    # Thresholding
     for k in range(x.shape[0]):
-        for i in range(32):
-            for j in range(32):
-                if x[k,:,i,j] > shrinkage:
-                    x_thx[k,:,i,j] = ((np.abs(x[k,:,i,j]) - shrinkage)/np.abs(x[k,:,i,j]))*x[k,:,i,j]
+        for i in range(x.shape[2]):
+            for j in range(x.shape[3]):
+                if x[k,0,i,j] > shrinkage:
+                    x_threshold[k,0,i,j] = ((torch.abs(x[k,0,i,j]) - shrinkage)/torch.abs(x[k,0,i,j]))*x[k,0,i,j]
                 else:
-                    x_thx[k,:,i,j] = 0
-
-    return x_thx
+                    x_threshold[k,0,i,j] = 0
+    return x_threshold
 
 def ISTA(mu,shrinkage,K,y):
     # Identity matrix A
     A = torch.eye(y.shape[2])
     # Identity matrix I
     I = torch.eye(y.shape[2])
+
     for i in tqdm(range(K)):
         if i == 0:
             input = y
@@ -106,10 +105,10 @@ plt.show()
 MSE = torch.mean((x_clean_example - x_clean_pred) ** 2)
 print('MSE: ', MSE)
 
-
 # %% Entire dataset
-# Run the algrithm for the entire dataset
-x_clean_pred_test = ISTA(mu,shrinkage,K,x_noisy_test)
+# Run the model on the entire dataset over batches 
+for batch_idx, (x_clean, x_noisy, labels) in enumerate(tqdm(test_loader)):
+    x_clean_pred_test = ISTA(mu,shrinkage,K,x_noisy)
 
 # %% MSE
 # Compute the MSE for the training and test set
@@ -122,24 +121,24 @@ print("MSE test: ", mse_test)
 # show the examples in a plot
 plt.figure(figsize=(12,3))
 plt.subplot(3,10,6)
-plt.title("Noisy Examples",loc='right')
+plt.title("First 10 noisy images",loc='right')
 for i in range(10):
     plt.subplot(3,10,i+1)
-    plt.imshow(x_noisy_train[i,0,:,:],cmap='gray')
+    plt.imshow(x_noisy_test[i,0,:,:],cmap='gray')
     plt.xticks([])
     plt.yticks([])
 plt.subplot(3,10,16)
-plt.title("Predicted Examples",loc='right')
+plt.title("First 10 predicted images",loc='right')
 for i in range(10):
     plt.subplot(3,10,i+11)
     plt.imshow(x_clean_pred_test[i,0,:,:],cmap='gray')
     plt.xticks([])
     plt.yticks([])
 plt.subplot(3,10,26)
-plt.title("Clean Examples",loc='right')
+plt.title("First 10 clean images",loc='right')
 for i in range(10):
     plt.subplot(3,10,i+21)
-    plt.imshow(x_clean_train[i,0,:,:],cmap='gray')
+    plt.imshow(x_clean_test[i,0,:,:],cmap='gray')
     plt.xticks([])
     plt.yticks([])    
 plt.tight_layout()
