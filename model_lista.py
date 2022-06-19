@@ -19,7 +19,7 @@ class Lista (nn.Module):
         self.conv1 = nn.Conv2d(1, 1, 3, padding= 1)
         self.batchnorm1 = nn.BatchNorm2d(1)
         self.unfolds = 3
-        self.shrikage = nn.Parameter(0.1 * torch.ones(1,self.unfolds))
+        self.shrikage = nn.Parameter(10 * torch.ones(1,self.unfolds))
     
     def smooth_softthreshold(self,x,shrinkage):
         return x + 0.5 * ((torch.sqrt(((x - shrinkage)**2) + 1)) - (torch.sqrt(((x + shrinkage)**2) + 1)))
@@ -34,7 +34,6 @@ class Lista (nn.Module):
             x_conv1 = self.batchnorm1(self.conv1(x)) + input      
             x_out = self.smooth_softthreshold(x_conv1,self.shrikage[:,i])
             x_conv2 = self.batchnorm1(self.conv1(x_out))
-      
             return x_out
 
 def Trainer(model, train_loader, optimizer, criterion, epochs):
@@ -107,7 +106,7 @@ if __name__ == '__main__':
 
     # Train the network
     print("Starting training process...")
-    train_loss = Trainer(model, train_loader, optimizer, criterion, epochs=30)   
+    train_loss = Trainer(model, train_loader, optimizer, criterion, epochs=10)   
     print("Finished training.")
     save_path = 'model_lista.pth'
     torch.save(model.state_dict(), save_path)
