@@ -32,11 +32,17 @@ def image_to_kspace(image):
 def image_to_partialkspace(kspace, mask):
     partialkspace = mask * kspace
     return partialkspace
+#%%
+# Create function for accelerating measurement MRI
+def pkspace_to_image(pkspace):
+    image = torch.abs(torch.fft.ifft2(torch.fft.ifftshift(pkspace), norm="forward"))
+    return image
 
 #%% 
 # Get the kspace, the pkspace, the max and min of kspace_plot_friendly 
 kspce = image_to_kspace(gt)
 pkspce = image_to_partialkspace(kspce, M)
+acc_MRI = pkspace_to_image(pkspce)
 
 pkspace_plot_friendly = torch.log(torch.abs(pkspce)+1e-20)
 kspace_plot_friendly = torch.log(torch.abs(kspce)+1e-20)
@@ -45,27 +51,33 @@ vmin = torch.min(kspace_plot_friendly)
 vmax = torch.max(kspace_plot_friendly)
 
 plt.figure(figsize = (10,10))
-plt.subplot(1,4,1)
+plt.subplot(1,5,1)
 plt.imshow(gt[0,:,:],cmap='gray')
 plt.xticks([])
 plt.yticks([])
-plt.title('ground truth')
+plt.title('Ground truth MRI')
 
-plt.subplot(1,4,2)
+plt.subplot(1,5,2)
 plt.imshow(kspace_plot_friendly[0,:,:],vmin=vmin, vmax=vmax, interpolation='nearest')
 plt.xticks([])
 plt.yticks([])
-plt.title('k-space')
+plt.title('Full K-space')
 
-plt.subplot(1,4,3)
+plt.subplot(1,5,3)
 plt.imshow(M[0,:,:], interpolation='nearest')
 plt.xticks([])
 plt.yticks([])
-plt.title('measurement mask')
+plt.title('Sampling mask')
 
-plt.subplot(1,4,4)
+plt.subplot(1,5,4)
 plt.imshow(pkspace_plot_friendly[0,:,:],vmin=vmin, vmax=vmax, interpolation='nearest')
 plt.xticks([])
 plt.yticks([])
-plt.title('partial k-space')
+plt.title('Partial K-space')
+
+plt.subplot(1,5,5)
+plt.imshow(acc_MRI[0,:,:],cmap='gray')
+plt.xticks([])
+plt.yticks([])
+plt.title('Accelerated MRI')
 plt.show()
