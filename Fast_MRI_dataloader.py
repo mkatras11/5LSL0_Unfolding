@@ -6,6 +6,8 @@ import glob
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm 
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 # %% Fast MRI dataset
 class Fast_MRI(Dataset):
@@ -51,7 +53,8 @@ def create_dataloaders(data_loc, batch_size):
 # %% test if the dataloaders work
 if __name__ == "__main__":
     # define parameters
-    data_loc = 'D://5LSL0-Datasets//Fast_MRI_Knee' #change the datalocation to something that works for you
+    data_loc = os.path.dirname(os.path.realpath(__file__)) #change the datalocation to something that works for you
+    data_loc = os.path.join(data_loc,'Fast_MRI_Knee')
     batch_size = 2
     
     train_loader, test_loader = create_dataloaders(data_loc, batch_size)
