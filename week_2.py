@@ -1,10 +1,12 @@
+#%%
 import torch
 from Fast_MRI_dataloader import create_dataloaders
 import os
-os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 import tqdm
 import matplotlib.pyplot as plt
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
+#%%
 # define parameters
 data_loc = os.path.dirname(os.path.realpath(__file__)) #change the datalocation to something that works for you
 data_loc = os.path.join(data_loc,'Fast_MRI_Knee')
@@ -19,18 +21,20 @@ for i,(kspace, M, gt) in enumerate(test_loader):
     continue
 
 
-
+#%%
 # Create function to calculate the K-space of MRI images
 def image_to_kspace(image):
     kspace = torch.fft.fftshift(torch.fft.fft2(image, norm="forward"))
     return kspace
 
+#%%
 # Create function to calculate partial kspace of MRI images
 def image_to_partialkspace(kspace, mask):
     partialkspace = mask * kspace
     return partialkspace
 
-
+#%% 
+# Get the kspace, the pkspace, the max and min of kspace_plot_friendly 
 kspce = image_to_kspace(gt)
 pkspce = image_to_partialkspace(kspce, M)
 
