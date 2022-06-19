@@ -50,6 +50,8 @@ kspace_plot_friendly = torch.log(torch.abs(kspce)+1e-20)
 vmin = torch.min(kspace_plot_friendly)
 vmax = torch.max(kspace_plot_friendly)
 
+#%%
+# Plot the ground truth, full k-space, sample mask, partial k-space and accelerated MRI
 plt.figure(figsize = (10,10))
 plt.subplot(1,5,1)
 plt.imshow(gt[0,:,:],cmap='gray')
