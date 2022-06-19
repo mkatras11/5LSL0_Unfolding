@@ -112,22 +112,30 @@ def ISTA(mu,shrinkage,K,kspace,M):
     return x_new
 
 # parameters
-mu = 0.09
-shrinkage = 0.0001
-K = 10
+mu = 0.9
+shrinkage = 0.00001
+K = 100
 # reconstructed image
 recon_image = ISTA(mu,shrinkage,K,kspace,M)
+recon_image_2 = pkspace_to_image(kspace)
 
 plt.figure(figsize = (10,10))
-plt.subplot(1,2,1)
+plt.subplot(1,3,1)
 plt.imshow(gt[0,:,:],cmap='gray')
 plt.xticks([])
 plt.yticks([])
 plt.title('Ground truth MRI')
 
-plt.subplot(1,2,2)
+plt.subplot(1,3,2)
 plt.imshow(recon_image[0,:,:],cmap='gray')
 plt.xticks([])
 plt.yticks([])
 plt.title('Reconstructed MRI')
+
+plt.subplot(1,3,3)
+plt.imshow(recon_image_2[0,:,:],cmap='gray')
+plt.xticks([])
+plt.yticks([])
+plt.title('Noisy MRI')
+
 plt.show()
