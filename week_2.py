@@ -2,7 +2,7 @@
 import torch
 from Fast_MRI_dataloader import create_dataloaders
 import os
-import tqdm
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
@@ -17,7 +17,7 @@ train_loader, test_loader = create_dataloaders(data_loc, batch_size)
 
 # go over the dataset
 gt = []
-for i,(kspace, M, gt) in enumerate(test_loader):
+for i,(kspace, M, gt) in enumerate(tqdm(test_loader)):
     continue
 
 
@@ -83,4 +83,51 @@ plt.xticks([])
 plt.yticks([])
 plt.title('Accelerated MRI')
 plt.savefig('Knee_MRI_Acceleration.png')
+plt.show()
+
+
+# %% ISTA
+def softthreshold(x,shrinkage):
+    # Initialize output
+    x_threshold = x.clone()
+
+    # Thresholding
+    x_threshold[x > shrinkage] = ((torch.abs(x[x > shrinkage]) - shrinkage)/torch.abs(x[x > shrinkage]))*x[x > shrinkage]
+    x_threshold[x <= shrinkage] = 0
+
+    return x_threshold
+
+def ISTA(mu,shrinkage,K,kspace,M):
+    # Identity matrix A
+    A = M.clone()
+    # Identity matrix I
+    I = torch.eye(kspace.shape[2])
+    for i in tqdm(range(K)):
+        if i == 0:
+            input = pkspace_to_image(kspace)
+        else:
+            input = x_new
+        x_old = input
+        x_new = softthreshold((mu* pkspace_to_image(kspace) + torch.matmul(I-mu*A*torch.transpose(A,0,1),x_old)),shrinkage)
+    return x_new
+
+# parameters
+mu = 0.09
+shrinkage = 0.0001
+K = 10
+# reconstructed image
+recon_image = ISTA(mu,shrinkage,K,kspace,M)
+
+plt.figure(figsize = (10,10))
+plt.subplot(1,2,1)
+plt.imshow(gt[0,:,:],cmap='gray')
+plt.xticks([])
+plt.yticks([])
+plt.title('Ground truth MRI')
+
+plt.subplot(1,2,2)
+plt.imshow(recon_image[0,:,:],cmap='gray')
+plt.xticks([])
+plt.yticks([])
+plt.title('Reconstructed MRI')
 plt.show()
