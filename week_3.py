@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from Fast_MRI_dataloader import create_dataloaders
 from tqdm import tqdm
-#from week_2 import pkspace_to_image , image_to_kspace, image_to_partialkspace
+from torch.fft import fft2, fftshift, ifft2, ifftshift
 
 # Device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -16,22 +16,32 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, 3, padding=1)
-        self.conv2 = nn.Conv2d(32, 64, 3, padding=1)
-        self.conv3 = nn.Conv2d(64,32, 3, padding=1)
+        self.conv1 = nn.Conv2d(1, 16, 3, padding=1)
+        self.conv2 = nn.Conv2d(16, 32, 3, padding=1)
+        self.conv3 = nn.Conv2d(32,32, 3, padding=1)
         self.conv4 = nn.Conv2d(32, 1, 3, padding=1)
-        self.pool = nn.MaxPool2d(2, 2)
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.25)
+        self.batch_1 = nn.BatchNorm2d(16)
+        self.batch_2 = nn.BatchNorm2d(32)
+        self.batch_3 = nn.BatchNorm2d(32)
+        self.batch_4 = nn.BatchNorm2d(1)
         self.sigmoid = nn.Sigmoid()
 
     # Forward propagation
     def forward(self, x):
-        x = self.relu(self.conv1(x))
-        x = self.relu(self.conv2(x))
-        x = self.relu(self.conv3(x))
-        x = self.sigmoid(self.conv4(x))
-        return x
+        out = self.conv1(x)
+        out = self.batch_1(out)
+        out = self.relu(out)
+        out = self.conv2(out)
+        out = self.batch_2(out)
+        out = self.relu(out)
+        out = self.conv3(out)
+        out = self.batch_3(out)
+        out = self.relu(out)
+        out = self.conv4(out)
+        out = self.batch_4(out)
+        out = self.sigmoid(out)
+        return out
 
 # Calculate the validation loss
 def validation_loss(model, test_loader, criterion, device):
@@ -110,17 +120,17 @@ def train_model(model, train_loader, test_loader, criterion, optimizer, device, 
             # Increment the number of training steps
             train_steps += 1
         # Calculate the average training loss
-        loss = train_loss / train_steps
+        train_loss = train_loss / train_steps
         # Append the training loss to the training loss list
-        train_losses.append(loss)
+        train_losses.append(train_loss)
         # Calculate the validation loss
-        loss = validation_loss(model, test_loader, criterion, device)
+        val_loss = validation_loss(model, test_loader, criterion, device)
         # Append the validation loss to the validation loss list
-        val_losses.append(loss)
+        val_losses.append(val_loss)
         # Print the training and validation loss
-        print("Epoch: {}/{}.. ".format(epoch+1, epochs),"Training Loss: {:.3f}.. ".format(loss), "Validation Loss: {:.3f}".format(loss))
-        # Save the model
-        torch.save(model.state_dict(), 'model_epoch_' + str(epoch+1) + '.pt')
+        print("Epoch: {}/{} ".format(epoch+1, epochs),"Training Loss: {:.3f} ".format(train_loss), "Validation Loss: {:.3f}".format(val_loss))
+    # Save the model
+    torch.save(model.state_dict(), 'model.pt')
     # Return the training and validation loss lists
     return train_losses, val_losses
 
@@ -167,4 +177,53 @@ train_loss, val_loss = train_model(model, train_loader, test_loader, criterion, 
 plot_loss(train_loss, val_loss)
 
 
+# %%
+def plot_ex5c(test_acc_mri, test_x_out, test_gt, save_path):
+
+    plt.figure(figsize = (10, 6))
+    for i in range(5):
+        plt.subplot(3,5,i+1)
+        plt.imshow(test_acc_mri[i+1,0,:,:],cmap='gray')
+        plt.xticks([])
+        plt.yticks([])
+        if i == 2:
+            plt.title('Accelerated MRI')
+
+        plt.subplot(3,5,i+6)
+        plt.imshow(test_x_out[i+1,0,:,:],vmax=2,cmap='gray')
+        plt.xticks([])
+        plt.yticks([])
+        if i == 2:
+            plt.title('Reconstruction from CNN')
+
+        plt.subplot(3,5,i+11)
+        plt.imshow(test_gt[i+1,0,:,:],cmap='gray')
+        plt.xticks([])
+        plt.yticks([])
+        if i == 2:
+            plt.title('Ground truth')
+
+    plt.savefig(f"{save_path}", dpi=300, bbox_inches='tight')
+    plt.show()
+
+# %% 
+# Load the model saved model 
+model = CNN().to(device)
+model.load_state_dict(torch.load('model.pt'))
+for i, (pkspace,M,gt) in enumerate(tqdm(test_loader)):
+    if i == 1:
+        break
+image = torch.abs(ifft2(ifftshift(pkspace, dim=(1, 2)), dim=(1, 2)))
+# Unsqueeze the image 
+image = image.unsqueeze(1).to(device)
+# Unsqueeze the gt
+gt = gt.unsqueeze(1).to(device)
+# Get the image from the model
+outputs = model(image)
+# Detach the outputs
+outputs = outputs.detach().cpu().numpy()
+image = image.detach().cpu().numpy()
+gt = gt.detach().cpu().numpy()
+# Print the output with the plot_ex5c function
+plot_ex5c(image, outputs, gt, 'ex5c.png')
 # %%
