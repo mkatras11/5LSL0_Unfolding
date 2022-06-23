@@ -119,6 +119,8 @@ def train_model(model, train_loader, test_loader, criterion, optimizer, device, 
         val_losses.append(loss)
         # Print the training and validation loss
         print("Epoch: {}/{}.. ".format(epoch+1, epochs),"Training Loss: {:.3f}.. ".format(loss), "Validation Loss: {:.3f}".format(loss))
+        # Save the model
+        torch.save(model.state_dict(), 'model_epoch_' + str(epoch+1) + '.pt')
     # Return the training and validation loss lists
     return train_losses, val_losses
 
