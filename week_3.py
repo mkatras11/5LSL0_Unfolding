@@ -16,13 +16,13 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
-        self.conv1 = nn.Conv2d(1, 16, 3, padding=1)
-        self.conv2 = nn.Conv2d(16, 32, 3, padding=1)
-        self.conv3 = nn.Conv2d(32,32, 3, padding=1)
+        self.conv1 = nn.Conv2d(1, 8, 3, padding=1)
+        self.conv2 = nn.Conv2d(8, 16, 3, padding=1)
+        self.conv3 = nn.Conv2d(16,32, 3, padding=1)
         self.conv4 = nn.Conv2d(32, 1, 3, padding=1)
         self.relu = nn.ReLU()
-        self.batch_1 = nn.BatchNorm2d(16)
-        self.batch_2 = nn.BatchNorm2d(32)
+        self.batch_1 = nn.BatchNorm2d(8)
+        self.batch_2 = nn.BatchNorm2d(16)
         self.batch_3 = nn.BatchNorm2d(32)
         self.batch_4 = nn.BatchNorm2d(1)
         self.sigmoid = nn.Sigmoid()
@@ -62,7 +62,7 @@ def validation_loss(model, test_loader, criterion, device):
         # Unsqueeze the gt
         gt = gt.unsqueeze(1)
         # Get accelerated MRI image from partial kspace
-        image = torch.abs(torch.fft.ifft2(torch.fft.ifftshift(pkspace), norm="forward"))
+        image = torch.abs(ifft2(pkspace))
         # Get the image from the model
         outputs = model(image)
         # Calculate the loss
@@ -104,7 +104,7 @@ def train_model(model, train_loader, test_loader, criterion, optimizer, device, 
             # Unsqueeze the gt
             gt = gt.unsqueeze(1)
             # Get accelerated MRI image from partial kspace
-            image = torch.abs(torch.fft.ifft2(torch.fft.ifftshift(pkspace), norm="forward"))
+            image = torch.abs(ifft2(pkspace))
             # Get the image from the model
             outputs = model(image)
             # Calculate the loss
@@ -140,22 +140,24 @@ def plot_loss(train_losses, val_losses):
     # Plot the training loss
     plt.plot(epochs, train_losses, label="Training loss")
     # Plot the validation loss
-    plt.plot(epochs, val_losses, label="Validation loss")
+    plt.plot(epochs, val_losses, label="Test loss")
     # Set the x-axis label
     plt.xlabel("Epochs")
     # Set the y-axis label
     plt.ylabel("Loss")
     # Set the title
-    plt.title("Training and validation loss")
+    plt.title("Training and Test loss")
     # Add the legend
     plt.legend()
+    # Save the figure
+    plt.savefig("loss.png")
     # Show the plot
     plt.show()
 
 
 # Set the parameters of the model 
 batch_size = 32
-epochs = 10
+epochs = 50
 learning_rate = 0.001
 
 # Load the data
@@ -187,14 +189,14 @@ def plot_ex5c(test_acc_mri, test_x_out, test_gt, save_path):
         plt.xticks([])
         plt.yticks([])
         if i == 2:
-            plt.title('Accelerated MRI')
+            plt.title('Initial Reconstruction')
 
         plt.subplot(3,5,i+6)
         plt.imshow(test_x_out[i+1,0,:,:],vmax=2,cmap='gray')
         plt.xticks([])
         plt.yticks([])
         if i == 2:
-            plt.title('Reconstruction from CNN')
+            plt.title('Reconstruction with CNN')
 
         plt.subplot(3,5,i+11)
         plt.imshow(test_gt[i+1,0,:,:],cmap='gray')
@@ -203,7 +205,7 @@ def plot_ex5c(test_acc_mri, test_x_out, test_gt, save_path):
         if i == 2:
             plt.title('Ground truth')
 
-    plt.savefig(f"{save_path}", dpi=300, bbox_inches='tight')
+    plt.savefig(f"{save_path}", bbox_inches='tight')
     plt.show()
 
 # %% 
@@ -213,7 +215,7 @@ model.load_state_dict(torch.load('model.pt'))
 for i, (pkspace,M,gt) in enumerate(tqdm(test_loader)):
     if i == 1:
         break
-image = torch.abs(ifft2(ifftshift(pkspace, dim=(1, 2)), dim=(1, 2)))
+image = torch.abs(ifft2(pkspace))
 # Unsqueeze the image 
 image = image.unsqueeze(1).to(device)
 # Unsqueeze the gt
@@ -226,4 +228,11 @@ image = image.detach().cpu().numpy()
 gt = gt.detach().cpu().numpy()
 # Print the output with the plot_ex5c function
 plot_ex5c(image, outputs, gt, 'ex5c.png')
+# %%
+# Find the MSE between the outputs and the ground truth
+mse = np.mean((outputs - gt)**2)
+# Print the MSE
+print(mse)
+
+
 # %%
